@@ -1,0 +1,142 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,700"  type="text/css">
+<link rel="import" href="add-remove-class.html">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
+<link rel="import" href="m-question-group.comp.html">
+<template>
+  <style>
+    :host {
+      font-family: 'Roboto', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #cfd2da;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .container {
+      margin-right: auto;
+      margin-left: auto;
+    }
+    @media (min-width: 768px) {
+      .container {
+        width: 750px;
+      }
+    }
+    @media (min-width: 992px) {
+      .container {
+        width: 970px;
+      }
+    }
+    @media (min-width: 1200px) {
+      .container {
+        width: 1170px;
+      }
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: inherit;
+      font-weight: 300;
+      line-height: 1.1;
+      color: #ffffff;
+    }
+
+    hr {
+      border: 0;
+      border-top: 1px solid #434857;
+      box-sizing: content-box;
+      height: 0;
+      margin: 20px 0 30px;
+    }
+
+    .grid {
+      display: flex;
+      flex-flow: row wrap;
+      justify-content: center;
+    }
+  </style>
+  <div class="container">
+    <h1 class="title"></h1>
+    <hr>
+    <div class="grid">
+      <content select="m-question-group"></content>
+    </div>
+  </div>
+</template>
+<script>
+(function() {
+  var template = document._currentScript.ownerDocument.querySelector('template').content;
+  var element = Object.create(HTMLElement.prototype);
+
+  element.createdCallback = function() {
+    this.root = this.createShadowRoot();
+    var clone = document.importNode(template, true);
+    this.root.appendChild(clone);
+
+    var title = this.hasAttribute('title') ? this.getAttribute('title') : '';
+    this.root.querySelector('.title').textContent = title;
+    this.addEventListener('know', this.sendKnow.bind(this))
+    this.addEventListener('dont-know', this.sendDontKnow.bind(this))
+  };
+
+  element.attachedCallback = function() {
+    this.connectServer();
+  }
+
+  element.sendKnow = function (event) {
+    this.ws.send(JSON.stringify({ event: 'know', hash: event.detail.hash }));
+  }
+
+  element.sendDontKnow = function (event) {
+    this.ws.send(JSON.stringify({ event: 'dontKnow', hash: event.detail.hash }));
+  }
+
+  element.questionAnswers = function(event) {
+    var nodes = this.root.querySelector('content').getDistributedNodes();
+    [].forEach.call(nodes, function (node) {
+      var data = event.questionAnswers.find(byHash(node.getAttribute('hash')));
+      if (data) {
+        node.setAttribute('know', data.know);
+        node.setAttribute('dont-know', data.dontKnow);
+      }
+    });
+  }
+
+  element.questionAnswer = function(event) {
+    var nodes = this.root.querySelector('content').getDistributedNodes();
+    [].forEach.call(nodes, function (node) {
+      if (node.getAttribute('hash') !== event.questionAnswer.hash) return;
+      node.setAttribute('know', event.questionAnswer.know);
+      node.setAttribute('dont-know', event.questionAnswer.dontKnow);
+    });
+  }
+
+  element.connectServer = function() {
+    this.ws = new window.ReconnectingWebSocket(this.getAttribute('src'))
+    var handlers = {
+      questionAnswers: this.questionAnswers.bind(this),
+      questionAnswer: this.questionAnswer.bind(this)
+    }
+
+    this.ws.addEventListener('open', function (event) {
+      this.ws.send(JSON.stringify({ event: 'getQuestionAnswers' }));
+    }.bind(this));
+
+    this.ws.addEventListener('message', function (event) {
+      var data = JSON.parse(event.data);
+      var handler = handlers[data.event];
+      if (!handler) return;
+      handler(data)
+    }.bind(this));
+  }
+
+  function byHash(hash) {
+    return function (item) {
+      return item.hash === hash;
+    };
+  }
+
+  document.registerElement('m-questions', { prototype: element });
+}());
+</script>

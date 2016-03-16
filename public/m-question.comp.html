@@ -1,0 +1,17 @@
+<template>
+  <content></content>
+</template>
+<script>
+(function() {
+  var template = document._currentScript.ownerDocument.querySelector('template').content;
+  var element = Object.create(HTMLElement.prototype);
+
+  element.createdCallback = function() {
+    var shadowRoot = this.createShadowRoot();
+    var clone = document.importNode(template, true);
+    shadowRoot.appendChild(clone);
+  };
+
+  document.registerElement('m-question', { prototype: element });
+}());
+</script>

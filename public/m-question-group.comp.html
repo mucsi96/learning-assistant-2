@@ -1,0 +1,214 @@
+<link rel="import" href="m-question.comp.html">
+<link rel="import" href="m-answer.comp.html">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.3.0/js/md5.min.js"></script>
+<template>
+  <style>
+
+    :host {
+      color: #cfd2da;
+      border: 1px solid #434857;
+      border-radius: 3px;
+      margin: .5vw;
+      position: relative;
+      overflow: hidden;
+    }
+
+    :host(.closed) {
+      width: 75px;
+      height: 75px;
+      cursor: pointer;
+      color: #999999;
+      flex: 0 1 auto;
+    }
+
+    :host(.closed.answered) {
+      background-color: #e64759;
+      color: #ffffff;
+      border: none;
+    }
+
+    :host(.closed) .question {
+      display: none;
+    }
+
+    :host(.closed) .answer {
+      display: none;
+    }
+
+    :host(.closed) .button-container {
+      display: none;
+    }
+
+    :host(.opened) {
+      padding: 0 2vw 2vw;
+      flex: 0 1 100%;
+    }
+
+    :host(.opened) .answer {
+      display: none;
+    }
+
+    :host(.opened) .score {
+      display: none;
+    }
+
+    :host(.opened) .number-container {
+      display: block;
+      position: static;
+    }
+
+    :host(.answer-opened) .answer {
+      display: block;
+    }
+
+    :host(.opened) h2 {
+      font-weight: 300;
+      font-size: 1.75rem;
+    }
+
+    .number-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0
+    }
+
+    .number {
+      font-weight: 300;
+      font-size: .9rem;
+      letter-spacing: 0;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: center;
+    }
+
+    button {
+      color: #1997c6;
+      border: 1px solid #1997c6;
+      background-color: transparent;
+      padding: 6px 20px;
+      font-size: .9rem;
+      letter-spacing: normal;
+      display: inline-block;
+      font-weight: normal;
+      text-align: center;
+      line-height: 1.5;
+      border-radius: 4px;
+      margin: 0 .5vw;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .score {
+      background-color: #1bc98e;
+      position: absolute;
+      top: 100%;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      transition: all 1s;
+    }
+
+
+  </style>
+  <div class="score"></div>
+  <div class="number-container">
+    <h2 class="number"></h2>
+  </div>
+  <p class="question">
+    <content select="m-question"></content>
+  </p>
+
+  <p class="answer">
+    <content select="m-answer"></content>
+  </p>
+
+  <div class="button-container">
+    <button class="button-close">Close</button>
+    <button class="button-show-answer">Show answer</button>
+    <button class="button-dont-know">Don't know</button>
+    <button class="button-know">Know</button>
+  </div>
+</template>
+<script>
+(function() {
+  var template = document._currentScript.ownerDocument.querySelector('template').content;
+  var element = Object.create(HTMLElement.prototype);
+  var index = 1;
+
+  element.createdCallback = function() {
+    this.root = this.createShadowRoot();
+    var clone = document.importNode(template, true);
+    this.root.appendChild(clone);
+
+
+    this.root.querySelector('.number').textContent = '#' + index++;
+    this.setAttribute('hash', md5(this.root.querySelector('.question content').getDistributedNodes()[0].textContent))
+
+    this.className = 'closed'
+  };
+
+  element.attachedCallback = function() {
+    this.addEventListener('click', this.open.bind(this));
+    this.root.querySelector('.button-close').addEventListener('click', this.close.bind(this));
+    this.root.querySelector('.button-show-answer').addEventListener('click', this.showAnswer.bind(this));
+    this.root.querySelector('.button-dont-know').addEventListener('click', this.dontKnow.bind(this));
+    this.root.querySelector('.button-know').addEventListener('click', this.know.bind(this));
+  }
+
+  //Called when one of this components attributes change
+  element.attributeChangedCallback = function(attrName, oldVal, newVal) {
+    if ( /^(know|dont-know)$/.test(attrName) ) {
+        this.updateScore(this);
+    }
+  };
+
+  element.updateScore = function () {
+    var know = parseInt(this.getAttribute('know')) || 0;
+    var dontKnow = parseInt(this.getAttribute('dont-know')) || 0;
+    var answers = know + dontKnow;
+    var score = answers > 0 ? (know - dontKnow) / (answers) : undefined;
+
+    if (answers) {
+      addClass(this, 'answered');
+      this.root.querySelector('.score').style = 'top: ' + 100*dontKnow/answers + '%;';
+    }
+  }
+
+  element.open = function () {
+    this.className = this.className.replace('closed','opened');
+  }
+
+  element.close = function (event) {
+    if (event) event.stopPropagation();
+    this.className = this.className.replace('opened','closed');
+    removeClass(this, 'answer-opened');
+    this.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true,  cancelable: true, view: window }));
+  }
+
+  element.showAnswer = function (event) {
+    event.stopPropagation();
+    addClass(this, 'answer-opened');
+  }
+
+  element.dontKnow = function (event) {
+    event.stopPropagation();
+    this.close();
+    this.dispatchEvent(new CustomEvent('dont-know', { bubbles: true, detail: { hash: this.getAttribute('hash') }}))
+  }
+
+  element.know = function (event) {
+    event.stopPropagation();
+    this.close();
+    this.dispatchEvent(new CustomEvent('know', { bubbles: true, detail: { hash: this.getAttribute('hash') }}))
+  }
+
+  document.registerElement('m-question-group', { prototype: element });
+}());
+</script>
