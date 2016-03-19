@@ -75,8 +75,8 @@
     var clone = document.importNode(template, true);
     this.root.appendChild(clone);
 
-    var title = this.hasAttribute('title') ? this.getAttribute('title') : '';
-    this.root.querySelector('.title').textContent = title;
+    this.title = this.hasAttribute('title') ? this.getAttribute('title') : '';
+    this.root.querySelector('.title').textContent = this.title;
     this.addEventListener('know', this.sendKnow.bind(this))
     this.addEventListener('dont-know', this.sendDontKnow.bind(this))
   };
@@ -87,11 +87,11 @@
   }
 
   element.sendKnow = function (event) {
-    this.ws.send(JSON.stringify({ event: 'know', hash: event.detail.hash }));
+    this.ws.send(JSON.stringify({ event: 'know', hash: event.detail.hash, title: this.title }));
   }
 
   element.sendDontKnow = function (event) {
-    this.ws.send(JSON.stringify({ event: 'dontKnow', hash: event.detail.hash }));
+    this.ws.send(JSON.stringify({ event: 'dontKnow', hash: event.detail.hash, title: this.title }));
   }
 
   element.questionAnswers = function(event) {
@@ -122,7 +122,7 @@
     }
 
     this.ws.addEventListener('open', function (event) {
-      this.ws.send(JSON.stringify({ event: 'getQuestionAnswers' }));
+      this.ws.send(JSON.stringify({ event: 'getQuestionAnswers', title: this.title }));
     }.bind(this));
 
     this.ws.addEventListener('message', function (event) {

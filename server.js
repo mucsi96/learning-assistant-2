@@ -55,31 +55,31 @@ function byHash(hash) {
 }
 
 function * getQuestionAnswers(db, ws, event) {
-  ws.send(JSON.stringify({ event: 'questionAnswers', questionAnswers: yield* findAllAnswers(db) }));
+  ws.send(JSON.stringify({ event: 'questionAnswers', questionAnswers: yield* findAllAnswers(db, event.title) }));
 }
 
 function * know(db, ws, event) {
-  let answer = yield* findAnswer(db, event.hash);
-  if (!answer) answer = yield* createAnswer (db, { hash: event.hash, know: 0, dontKnow: 0 });
+  let answer = yield* findAnswer(db, event.hash, event.title);
+  if (!answer) answer = yield* createAnswer (db, { hash: event.hash, title: event.title, know: 0, dontKnow: 0 });
   answer.know++;
   yield saveAnswer(db, answer);
   ws.send(JSON.stringify({ event: 'questionAnswer', hash: event.hash, questionAnswer: answer }));
 }
 
 function * dontKnow(db, ws, event) {
-  let answer = yield* findAnswer(db, event.hash)
-  if (!answer) answer = yield* createAnswer (db, { hash: event.hash, know: 0, dontKnow: 0 });
+  let answer = yield* findAnswer(db, event.hash, event.title)
+  if (!answer) answer = yield* createAnswer (db, { hash: event.hash, title: event.title, know: 0, dontKnow: 0 });
   answer.dontKnow++;
   yield saveAnswer(db, answer);
   ws.send(JSON.stringify({ event: 'questionAnswer', hash: event.hash, questionAnswer: answer }));
 }
 
-function * findAllAnswers(db) {
-  return yield db.collection('answers').find({}).toArray();
+function * findAllAnswers(db, title) {
+  return yield db.collection('answers').find({ title }).toArray();
 }
 
-function * findAnswer(db, hash) {
-  return yield db.collection('answers').findOne({ hash });
+function * findAnswer(db, hash, title) {
+  return yield db.collection('answers').findOne({ hash, title });
 }
 
 function * createAnswer(db, answer) {
@@ -88,5 +88,5 @@ function * createAnswer(db, answer) {
 }
 
 function * saveAnswer(db, answer) {
-  yield db.collection('answers').updateOne({ hash: answer.hash }, answer);
+  yield db.collection('answers').updateOne({ hash: answer.hash, title: answer.title }, answer);
 }
