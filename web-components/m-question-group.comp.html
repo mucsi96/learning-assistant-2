@@ -151,7 +151,7 @@
     this.root.querySelector('.number').textContent = '#' + index++;
     var question = this.root.querySelector('.question content').getDistributedNodes()[0].innerHtml;
     var answer = this.root.querySelector('.answer content').getDistributedNodes()[0].innerHtml;
-    this.setAttribute('hash', md5(question + answer)
+    this.setAttribute('hash', md5(question + answer));
 
     this.className = 'closed'
   };
