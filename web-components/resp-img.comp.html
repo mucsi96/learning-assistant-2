@@ -1,0 +1,26 @@
+<template>
+  <style>
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+  <img>
+</template>
+<script>
+(function() {
+  var template = document._currentScript.ownerDocument.querySelector('template').content;
+  var element = Object.create(HTMLElement.prototype);
+
+  element.createdCallback = function() {
+    var root = this.createShadowRoot();
+    var clone = document.importNode(template, true);
+    root.appendChild(clone);
+    var img = root.querySelector('img');
+    img.setAttribute('src', this.getAttribute('src'));
+    img.setAttribute('alt', this.getAttribute('alt'));
+  };
+
+  document.registerElement('resp-img', { prototype: element });
+}());
+</script>
